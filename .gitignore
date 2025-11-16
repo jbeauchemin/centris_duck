@@ -12,9 +12,13 @@ ENV/
 # Images et résultats
 potential_ducks/
 images/
+screenshots/
 *.jpg
 *.png
 *.jpeg
+
+# Checkpoint de progression
+checkpoint.json
 
 # IDE
 .vscode/
