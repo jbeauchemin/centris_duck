@@ -38,10 +38,10 @@ Le script utilisera automatiquement l'image de référence si elle existe!
 wget https://exemple.com/canard-mauve.jpg -O reference/duck_reference.jpg
 
 # 2. Analyse l'image
-python analyze_reference.py
+python3 analyze_reference.py
 
 # 3. Lance le scan avec l'image de référence
-python duck_finder_fast.py
+python3 duck_finder_fast.py
 ```
 
 Le script va maintenant chercher des images similaires à ton canard de référence!
