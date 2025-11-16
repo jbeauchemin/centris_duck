@@ -185,10 +185,12 @@ class CompleteDuckFinder:
             # Différents sélecteurs possibles pour les liens de propriétés
             property_selectors = [
                 'a[href*="/proprietes/"]',
-                'a[href*="/fr/"]',
+                'a[href*="propriete~a-vendre"]',
                 'div.property-card a',
                 'article a[href*="propriete"]',
                 '.property-thumbnail-item',
+                'a.property-link',
+                '[data-id^="Prop"]',
             ]
 
             all_links = []
@@ -200,7 +202,7 @@ class CompleteDuckFinder:
                         selector,
                         '''elements => elements
                             .map(e => e.href)
-                            .filter(h => h && (h.includes('/proprietes/') || h.includes('/fr/')))
+                            .filter(h => h && h.includes('/proprietes/'))
                         '''
                     )
                     all_links.extend(links)
@@ -210,10 +212,14 @@ class CompleteDuckFinder:
             # Dédupliquer
             unique_links = list(set(all_links))
 
-            # Filtrer pour garder seulement les liens qui ressemblent à des propriétés
+            # Filtrer STRICTEMENT pour ne garder que les vraies annonces de propriétés
             property_links = [
                 link for link in unique_links
-                if 'propriete' in link.lower() or '/fr/' in link
+                if '/proprietes/' in link and  # DOIT avoir /proprietes/
+                   'blogue' not in link.lower() and  # PAS de blog
+                   'conseil' not in link.lower() and  # PAS de conseils
+                   'nouvelles' not in link.lower() and  # PAS de nouvelles
+                   'immobilier' not in link.lower()  # PAS d'articles généraux
             ]
 
             return property_links
