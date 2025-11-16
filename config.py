@@ -7,19 +7,32 @@ MAX_PROPERTIES = 50  # Nombre maximum de propriétés à analyser
 MAX_IMAGES_PER_PROPERTY = 100  # Nombre maximum d'images par propriété
 
 # Paramètres de détection du canard mauve
+# Couleur exacte du canard: #c97ef2 (RGB: 201, 126, 242) -> HSV: (139, 122, 242)
 PURPLE_DETECTION = {
-    # Plage HSV pour détecter le mauve/violet
-    # Hue: 130-160 (dans l'échelle OpenCV 0-180)
-    # Saturation: 50-255
-    # Value: 50-255
-    'lower_hsv': (130, 50, 50),
-    'upper_hsv': (160, 255, 255),
+    # Plage HSV STRICTE pour détecter le violet spécifique du canard
+    # Hue: 139 ± 8 (131-147) pour capturer les variations d'éclairage
+    # Saturation: 122 ± 40 (82-162) pour capturer différentes saturations
+    # Value: 242 ± 50 (192-255) pour capturer différentes luminosités
+    'lower_hsv_exact': (131, 82, 192),
+    'upper_hsv_exact': (147, 162, 255),
+
+    # Plage pour les zones d'ombre du canard
+    'lower_hsv_shadow': (129, 60, 150),
+    'upper_hsv_shadow': (149, 180, 200),
 
     # Pourcentage minimum de pixels mauves pour considérer l'image suspecte
-    'min_purple_percentage': 0.5,
+    # Augmenté à 1.0% pour réduire les faux positifs
+    'min_purple_percentage': 1.0,
+
+    # Taille minimale d'un contour pour être considéré significatif
+    # Augmenté à 500 pixels² pour éviter les petits artefacts
+    'min_contour_area': 500,
+
+    # Taille d'un contour pour être considéré comme "très suspect" (probablement le canard!)
+    'large_contour_area': 2000,
 
     # Taille du kernel pour les opérations morphologiques (réduction du bruit)
-    'morphology_kernel_size': 5,
+    'morphology_kernel_size': 3,
 }
 
 # Paramètres de navigation

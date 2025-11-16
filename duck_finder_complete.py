@@ -324,6 +324,7 @@ class CompleteDuckFinder:
         """
         Analyse avancée pour détecter un canard mauve
         Utilise détection de couleur + détection de contours
+        Couleur cible du canard: #c97ef2 (RGB: 201, 126, 242) -> HSV: (139, 122, 242)
         """
         try:
             # Charger l'image
@@ -334,18 +335,24 @@ class CompleteDuckFinder:
             # Convertir en HSV
             hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-            # Plages de couleur mauve/violet
-            # Mauve clair
-            lower_purple1 = np.array([130, 30, 50])
-            upper_purple1 = np.array([160, 255, 255])
+            # Couleur EXACTE du canard: #c97ef2
+            # HSV OpenCV: (139, 122, 242)
+            # Plage stricte pour cibler spécifiquement cette couleur
 
-            # Violet foncé
-            lower_purple2 = np.array([125, 50, 30])
-            upper_purple2 = np.array([145, 255, 200])
+            # Plage principale (stricte) - pour le violet du canard
+            # H: 139 ± 8 (131-147) pour capturer les variations d'éclairage
+            # S: 122 ± 40 (82-162) pour capturer différentes saturations
+            # V: 242 ± 50 (192-255) pour capturer différentes luminosités
+            lower_purple_exact = np.array([131, 82, 192])
+            upper_purple_exact = np.array([147, 162, 255])
+
+            # Plage secondaire (un peu plus large) pour les zones d'ombre du canard
+            lower_purple_shadow = np.array([129, 60, 150])
+            upper_purple_shadow = np.array([149, 180, 200])
 
             # Créer masques
-            mask1 = cv2.inRange(hsv, lower_purple1, upper_purple1)
-            mask2 = cv2.inRange(hsv, lower_purple2, upper_purple2)
+            mask1 = cv2.inRange(hsv, lower_purple_exact, upper_purple_exact)
+            mask2 = cv2.inRange(hsv, lower_purple_shadow, upper_purple_shadow)
             mask = cv2.bitwise_or(mask1, mask2)
 
             # Opérations morphologiques pour nettoyer
@@ -358,16 +365,24 @@ class CompleteDuckFinder:
             total_pixels = mask.shape[0] * mask.shape[1]
             purple_percentage = (purple_pixels / total_pixels) * 100
 
-            # Détecter des contours pour voir si c'est une forme cohérente
+            # Détecter des contours pour voir si c'est une forme cohérente (un canard!)
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-            # Filtrer les contours par taille
-            significant_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 100]
+            # Filtrer les contours par taille - un canard devrait être assez gros dans l'image
+            # Augmenté à 500 pixels pour éviter les faux positifs
+            significant_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 500]
 
-            # Critères de suspicion:
-            # 1. Au moins 0.3% de pixels mauves
-            # 2. OU au moins un contour significatif de couleur mauve
-            is_suspicious = purple_percentage > 0.3 or len(significant_contours) > 0
+            # Calculer la taille du plus gros contour
+            max_contour_area = max([cv2.contourArea(cnt) for cnt in significant_contours], default=0)
+
+            # Critères de suspicion STRICTS pour réduire les faux positifs:
+            # 1. Au moins 1% de pixels mauves (augmenté de 0.3%)
+            # 2. ET au moins un contour significatif de >500 pixels
+            # 3. OU un très gros contour de >2000 pixels (probablement un canard!)
+            is_suspicious = (
+                (purple_percentage > 1.0 and len(significant_contours) > 0) or
+                (max_contour_area > 2000)
+            )
 
             if is_suspicious:
                 # Sauvegarder l'image suspecte
@@ -394,11 +409,14 @@ class CompleteDuckFinder:
                     f.write(f"Image: {image_url}\n")
                     f.write(f"Pixels mauves: {purple_percentage:.2f}%\n")
                     f.write(f"Contours trouvés: {len(significant_contours)}\n")
+                    f.write(f"Plus gros contour: {max_contour_area} pixels²\n")
+                    f.write(f"Couleur cible: #c97ef2 (violet)\n")
                     f.write(f"Date: {datetime.now().isoformat()}\n")
 
                 print(f"\n🦆 CANARD POTENTIEL TROUVÉ! 🦆")
                 print(f"   Pixels mauves: {purple_percentage:.2f}%")
                 print(f"   Contours: {len(significant_contours)}")
+                print(f"   Plus gros contour: {max_contour_area} pixels²")
                 print(f"   Fichier: {filename}")
 
                 self.stats['suspicious_images'] += 1

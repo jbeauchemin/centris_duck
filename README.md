@@ -83,23 +83,34 @@ Les images suspectes sont sauvegardées dans le dossier `potential_ducks/` avec:
 
 ## Stratégie de détection
 
-Le script utilise une détection multi-niveaux:
+Le script utilise une détection multi-niveaux ciblée sur la couleur **exacte** du canard:
 
-1. **Détection de couleur HSV**
-   - Plage mauve clair: Hue 130-160°, Saturation 30-255, Value 50-255
-   - Plage violet foncé: Hue 125-145°, Saturation 50-255, Value 30-200
+### Couleur du canard 🎨
+- **HEX:** `#c97ef2`
+- **RGB:** (201, 126, 242)
+- **HSV:** (139, 122, 242) dans l'espace OpenCV
+
+### Méthode de détection
+
+1. **Détection de couleur HSV stricte**
+   - **Plage principale (lumière):** H: 131-147, S: 82-162, V: 192-255
+   - **Plage secondaire (ombre):** H: 129-149, S: 60-180, V: 150-200
+   - Ces plages sont **beaucoup plus strictes** pour éviter les faux positifs
 
 2. **Opérations morphologiques**
-   - Nettoyage du bruit avec fermeture/ouverture
+   - Nettoyage du bruit avec fermeture/ouverture (kernel 3x3)
    - Amélioration des contours
 
 3. **Détection de contours**
-   - Identification de formes cohérentes
-   - Filtrage par taille minimale (> 100 pixels²)
+   - Identification de formes cohérentes (un canard!)
+   - Filtrage par taille minimale: **> 500 pixels²** (augmenté pour éviter les artefacts)
 
-4. **Critères de suspicion**
-   - Au moins 0.3% de pixels mauves dans l'image
-   - OU présence de contours significatifs de couleur mauve
+4. **Critères de suspicion STRICTS**
+   - Au moins **1.0%** de pixels mauves dans l'image (augmenté de 0.3%)
+   - **ET** au moins un contour significatif de > 500 pixels²
+   - **OU** un très gros contour de > 2000 pixels² (probablement le canard!)
+
+Ces critères stricts réduisent drastiquement les faux positifs tout en gardant une bonne sensibilité pour le vrai canard.
 
 ## Progression et reprise
 
