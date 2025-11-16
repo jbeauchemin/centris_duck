@@ -24,7 +24,10 @@ import hashlib
 class CompleteDuckFinder:
     """Finder complet avec pagination et système de reprise"""
 
-    def __init__(self):
+    def __init__(self, verbose=True, show_browser=False):
+        self.verbose = verbose
+        self.show_browser = show_browser
+
         self.results_dir = Path('potential_ducks')
         self.results_dir.mkdir(exist_ok=True)
 
@@ -50,6 +53,11 @@ class CompleteDuckFinder:
             'errors': 0,
             'start_time': time.time()
         }
+
+    def log(self, message, force=False):
+        """Affiche un message si verbose est activé"""
+        if self.verbose or force:
+            print(message)
 
     def load_checkpoint(self) -> Dict:
         """Charge le checkpoint s'il existe"""
@@ -443,16 +451,21 @@ class CompleteDuckFinder:
 
     async def run(self):
         """Fonction principale"""
-        print("🦆 CENTRIS DUCK FINDER - VERSION COMPLÈTE 🦆")
-        print("=" * 60)
-        print("Ce script va parcourir TOUTES les propriétés de Centris!")
-        print("=" * 60)
+        self.log("🦆 CENTRIS DUCK FINDER - VERSION COMPLÈTE 🦆", force=True)
+        self.log("=" * 60, force=True)
+        self.log("Ce script va parcourir TOUTES les propriétés de Centris!", force=True)
+        self.log("=" * 60, force=True)
+
+        if self.show_browser:
+            self.log("\n👁️  Mode VISUEL activé - vous verrez le navigateur en action!", force=True)
+        else:
+            self.log("\n🔇 Mode silencieux - le navigateur tourne en arrière-plan", force=True)
 
         async with async_playwright() as p:
             # Lancer le navigateur
-            print("\n🌐 Lancement du navigateur...")
+            self.log("\n🌐 Lancement du navigateur...", force=True)
             browser = await p.chromium.launch(
-                headless=True,
+                headless=not self.show_browser,
                 args=['--disable-blink-features=AutomationControlled']
             )
 
@@ -483,21 +496,30 @@ class CompleteDuckFinder:
                 print(f"   (Déjà analysées: {len(all_properties) - len(properties_to_analyze)})")
 
                 # Analyser chaque propriété
-                print("\n" + "=" * 60)
-                print("🔍 Début de l'analyse des propriétés...")
-                print("=" * 60)
+                self.log("\n" + "=" * 60, force=True)
+                self.log("🔍 Début de l'analyse des propriétés...", force=True)
+                self.log("=" * 60, force=True)
 
                 for i, prop_url in enumerate(properties_to_analyze):
-                    print(f"\n[{i+1}/{len(properties_to_analyze)}] {prop_url}")
+                    # En-tête de progression
+                    elapsed = time.time() - self.stats['start_time']
+                    self.log(f"\n{'='*60}", force=True)
+                    self.log(f"📍 Propriété [{i+1}/{len(properties_to_analyze)}]", force=True)
+                    self.log(f"🔗 {prop_url}", force=True)
+                    self.log(f"⏱️  Temps écoulé: {elapsed/60:.1f} min | Images analysées: {self.stats['total_images']} | Canards trouvés: {self.stats['suspicious_images']}", force=True)
 
                     try:
                         # Récupérer les images
+                        self.log(f"  🖼️  Chargement de la page...", force=True)
                         images = await self.get_property_images(page, prop_url)
-                        print(f"  → {len(images)} images trouvées")
+                        self.log(f"  ✓ {len(images)} images trouvées", force=True)
 
                         # Analyser chaque image
-                        for img_url in images:
-                            await self.download_and_analyze_image(page, img_url, prop_url)
+                        for img_idx, img_url in enumerate(images, 1):
+                            self.log(f"    → Analyse image {img_idx}/{len(images)}...", force=False)
+                            is_suspicious = await self.download_and_analyze_image(page, img_url, prop_url)
+                            if is_suspicious:
+                                self.log(f"    🦆 CANARD DÉTECTÉ dans image {img_idx}!", force=True)
 
                         # Marquer comme visitée
                         self.visited_properties.add(prop_url)
@@ -506,13 +528,15 @@ class CompleteDuckFinder:
                         # Sauvegarder checkpoint tous les 10 propriétés
                         if (i + 1) % 10 == 0:
                             self.save_checkpoint()
-                            print(f"  💾 Checkpoint sauvegardé")
+                            self.log(f"  💾 Checkpoint sauvegardé (propriété {i+1})", force=True)
+                            # Afficher stats intermédiaires
+                            self.log(f"  📊 Stats: {self.stats['total_images']} images | {self.stats['suspicious_images']} suspects | {self.stats['errors']} erreurs", force=True)
 
                         # Petit délai entre les propriétés
                         await page.wait_for_timeout(1500)
 
                     except Exception as e:
-                        print(f"  ⚠ Erreur: {e}")
+                        self.log(f"  ⚠️  Erreur: {e}", force=True)
                         self.stats['errors'] += 1
                         continue
 
@@ -542,7 +566,28 @@ class CompleteDuckFinder:
 
 async def main():
     """Point d'entrée"""
-    finder = CompleteDuckFinder()
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Centris Duck Finder - Cherche le canard mauve sur Centris.ca')
+    parser.add_argument('--show-browser', action='store_true',
+                        help='Affiche le navigateur pendant le scan (mode visuel)')
+    parser.add_argument('--quiet', action='store_true',
+                        help='Mode silencieux - affiche seulement les résultats importants')
+
+    args = parser.parse_args()
+
+    verbose = not args.quiet
+    show_browser = args.show_browser
+
+    if show_browser:
+        print("\n" + "="*60)
+        print("👁️  MODE VISUEL ACTIVÉ")
+        print("="*60)
+        print("Vous allez voir le navigateur en action!")
+        print("Cela peut ralentir un peu le scan mais c'est cool à regarder 😎")
+        print("="*60 + "\n")
+
+    finder = CompleteDuckFinder(verbose=verbose, show_browser=show_browser)
     await finder.run()
 
 
@@ -550,6 +595,10 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n\n⚠ Arrêt demandé par l'utilisateur")
+        print("\n\n⚠️  Arrêt demandé par l'utilisateur")
         print("La progression a été sauvegardée dans checkpoint.json")
         print("Relance le script pour reprendre là où tu t'es arrêté!")
+        print("\nOptions disponibles:")
+        print("  python duck_finder_complete.py              # Mode normal")
+        print("  python duck_finder_complete.py --show-browser  # Voir le navigateur")
+        print("  python duck_finder_complete.py --quiet       # Mode silencieux")

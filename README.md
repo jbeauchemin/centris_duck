@@ -27,15 +27,31 @@ playwright install chromium
 Cette version parcourt **TOUT** le site Centris avec pagination complète et système de reprise:
 
 ```bash
+# Mode normal (recommandé) - affiche la progression en temps réel
 python duck_finder_complete.py
+
+# Mode VISUEL - voir le navigateur en action! 👁️
+python duck_finder_complete.py --show-browser
+
+# Mode silencieux - seulement les résultats importants
+python duck_finder_complete.py --quiet
 ```
 
 **Fonctionnalités:**
 - ✅ Pagination automatique pour parcourir toutes les pages de résultats
 - ✅ Système de checkpoint pour reprendre en cas d'interruption
 - ✅ Détection améliorée avec analyse de contours
-- ✅ Statistiques en temps réel
-- ✅ Sauvegarde automatique de la progression
+- ✅ Statistiques en temps réel avec progression détaillée
+- ✅ Sauvegarde automatique de la progression tous les 10 propriétés
+- ✅ Mode visuel optionnel pour voir le navigateur en action
+
+**Ce que tu verras pendant l'exécution:**
+- 📍 URL de chaque propriété en cours d'analyse
+- 🖼️ Nombre d'images trouvées par propriété
+- ⏱️ Temps écoulé et statistiques en temps réel
+- 🦆 Alertes immédiates quand un canard potentiel est détecté
+- 💾 Confirmations de sauvegarde de checkpoint
+- 📊 Statistiques tous les 10 propriétés
 
 Si le script est interrompu (Ctrl+C), tu peux simplement le relancer et il reprendra là où il s'est arrêté grâce au fichier `checkpoint.json`.
 
