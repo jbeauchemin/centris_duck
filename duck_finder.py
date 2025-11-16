@@ -192,41 +192,56 @@ class FastDuckFinder:
     async def extract_property_links(self, page: Page) -> List[str]:
         """Extrait tous les liens de propriétés de la page actuelle"""
         try:
-            property_selectors = [
-                'a[href*="/proprietes/"]',
-                'a[href*="propriete~a-vendre"]',
-                'div.property-card a',
-                'article a[href*="propriete"]',
-                '.property-thumbnail-item',
-                'a.property-link',
-                '[data-id^="Prop"]',
-            ]
-
+            # Stratégie 1: Chercher tous les liens avec 'propriete' (générique)
             all_links = []
-            for selector in property_selectors:
-                try:
-                    links = await page.eval_on_selector_all(
-                        selector,
-                        '''elements => elements
-                            .map(e => e.href)
-                            .filter(h => h && h.includes('/proprietes/'))
-                        '''
-                    )
-                    all_links.extend(links)
-                except:
-                    continue
 
+            try:
+                links = await page.eval_on_selector_all(
+                    'a',
+                    '''elements => elements
+                        .map(e => e.href)
+                        .filter(h => h && h.includes('/propriete'))
+                    '''
+                )
+                all_links.extend(links)
+            except:
+                pass
+
+            # Stratégie 2: Si rien trouvé, essayer des sélecteurs spécifiques
+            if not all_links:
+                property_selectors = [
+                    'a[href*="/propriete"]',
+                    'div.property-card a',
+                    'article a',
+                    'div[class*="property"] a',
+                    'div[class*="card"] a',
+                    '[data-id] a',
+                ]
+
+                for selector in property_selectors:
+                    try:
+                        links = await page.eval_on_selector_all(
+                            selector,
+                            'elements => elements.map(e => e.href).filter(h => h)'
+                        )
+                        all_links.extend(links)
+                    except:
+                        continue
+
+            # Dédupliquer
             unique_links = list(set(all_links))
 
             # Filtrer STRICTEMENT pour ne garder que les vraies annonces de propriétés
             property_links = [
                 link for link in unique_links
-                if '/proprietes/' in link and  # DOIT avoir /proprietes/
+                if ('/proprietes/' in link or '/propriete~' in link) and  # DOIT avoir un format de propriété
                    'blogue' not in link.lower() and  # PAS de blog
                    'conseil' not in link.lower() and  # PAS de conseils
                    'nouvelles' not in link.lower() and  # PAS de nouvelles
-                   'immobilier' not in link.lower()  # PAS d'articles généraux
+                   'immobilier' not in link.lower() and  # PAS d'articles généraux
+                   'centris.ca' in link  # Doit être un lien Centris
             ]
+
             return property_links
 
         except Exception as e:
