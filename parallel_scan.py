@@ -65,7 +65,7 @@ def run_parallel_scan(total_pages=250, num_instances=4, workers_per_instance=8):
         # Commande pour cette instance
         cmd = [
             sys.executable,
-            "duck_finder_fast.py",
+            "duck_finder.py",
             "--workers", str(workers_per_instance),
             "--start-page", str(start_page),
             "--end-page", str(end_page),

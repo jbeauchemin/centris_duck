@@ -1,262 +1,124 @@
 # Centris Duck Finder 🦆
 
-Ce projet cherche le canard mauve caché dans les photos des propriétés à vendre sur [centris.ca](https://centris.ca).
+Trouve le canard mauve caché dans les photos des propriétés à vendre sur [centris.ca](https://centris.ca).
 
-## Description
+## Installation & Utilisation
 
-Un canard mauve est caché quelque part dans les photos d'une des maisons à vendre sur Centris. Ce script automatise la recherche en:
-1. Parcourant **TOUTES** les propriétés sur centris.ca avec pagination complète
-2. Téléchargeant toutes les photos de chaque propriété
-3. Analysant chaque image avec détection de couleur + détection de contours
-4. Sauvegardant les images suspectes pour inspection manuelle
-
-## Installation
+C'est simple, lance juste:
 
 ```bash
-# Installer les dépendances Python
-pip install -r requirements.txt
-
-# Installer les navigateurs Playwright
-playwright install chromium
+bash run.sh
 ```
 
-## 🎯 Image de référence (RECOMMANDÉ!)
+**C'est tout!** Le script va:
+- ✅ Configurer l'environnement automatiquement (première fois)
+- ✅ Installer toutes les dépendances
+- ✅ Te montrer un menu interactif
 
-Pour améliorer la précision, tu peux fournir une **image du canard mauve** que tu cherches:
+## Menu Principal
 
-```bash
-# 1. Place ton image du canard dans le dossier reference/
-cp mon_canard.jpg reference/duck_reference.jpg
+Quand tu lances `bash run.sh`, tu as ces options:
 
-# 2. Analyse l'image pour extraire les couleurs
-python analyze_reference.py
+### 1) 🚀 Scanner tout Centris (mode rapide)
+Scan rapide avec 8 téléchargements parallèles (~100-200 images/min)
 
-# 3. Lance le scan normalement - il utilisera automatiquement ton image!
-python duck_finder_fast.py
-```
+### 2) ⚡ Scanner en PARALLÈLE (4-6x plus rapide!)
+Lance plusieurs instances en parallèle pour une vitesse maximale:
+- 4-6 instances recommandées
+- ~400-600 images/min
+- 45,000 maisons en 2-3 heures
 
-**Avantages:**
-- ✅ Détection basée sur **TA** couleur exacte de canard
-- ✅ Réduit encore plus les faux positifs
-- ✅ S'adapte aux variations d'éclairage de ton image
-- ✅ Génère un profil de couleur optimisé automatiquement
+### 3) 🎯 Analyser mon image de canard
+Si tu as une photo du canard que tu cherches:
+1. Place-la dans `reference/` (ex: `reference/duck.jpg`)
+2. Choisis cette option pour l'analyser
+3. Le scan utilisera automatiquement ta couleur de référence!
 
-Le script `analyze_reference.py` va:
-- Analyser les couleurs de ton canard
-- Extraire les plages HSV optimales
-- Créer un profil `reference/duck_profile.json`
-- Montrer des visualisations (masques, overlay)
+### 4) 🧪 Tester la détection sur une image
+Teste si une image contient du mauve détectable
 
-Si aucune image de référence n'est fournie, le script utilise la couleur par défaut **#c97ef2**.
+### 5) 🔄 Fusionner les checkpoints parallèles
+Après un scan parallèle, fusionne tous les résultats
 
-## Utilisation
+### 6) 🧹 Nettoyer les résultats
+Supprime tous les résultats et checkpoints pour recommencer
 
-### Version RAPIDE ⚡ (RECOMMANDÉE)
+## Comment ça marche
 
-Cette version utilise le **téléchargement parallèle** pour aller **2-3x plus vite** que la version normale:
-
-```bash
-# Version rapide avec 8 workers parallèles (par défaut)
-python duck_finder_fast.py
-
-# Personnaliser le nombre de workers (plus = plus rapide)
-python duck_finder_fast.py --workers 16
-
-# Limiter à quelques pages pour tester
-python duck_finder_fast.py --max-pages 5
-
-# Mode silencieux
-python duck_finder_fast.py --quiet
-```
-
-**Optimisations de vitesse:**
-- ⚡ **8 téléchargements parallèles** par défaut (ajustable avec `--workers`)
-- ⚡ Délais réduits entre les pages (800ms au lieu de 2000ms)
-- ⚡ Chargement DOM seulement (pas d'attente réseau complète)
-- ⚡ Analyse d'images en threads séparés
-- ⚡ Traitement par batch pour optimiser la mémoire
-
-**Résultat:** Analyse de **100-200 images/minute** (au lieu de 40-60 en mode normal)!
-
-**Note:** Compatible avec le même système de checkpoint que la version normale. Tu peux alterner entre les deux versions.
-
-### Mode MULTI-INSTANCES 🚀🚀🚀 (ULTRA RAPIDE pour gros sites)
-
-Pour les **très gros sites** (250+ pages, 45000+ maisons), lance **plusieurs instances en parallèle**:
-
-```bash
-# Lance 4 instances en parallèle (recommandé pour MacBook Pro M2 32GB)
-python parallel_scan.py --total-pages 250 --instances 4 --workers 8
-
-# Configuration agressive (6 instances x 12 workers = 72 workers!)
-python parallel_scan.py --total-pages 250 --instances 6 --workers 12
-
-# Pour tester
-python parallel_scan.py --total-pages 20 --instances 2 --workers 4
-```
-
-**Comment ça marche:**
-1. Le script divise les 250 pages en 4 tranches (ex: 1-62, 63-125, 126-187, 188-250)
-2. Lance 4 processus Python séparés, un par tranche
-3. Chaque processus a son propre checkpoint (`checkpoint_instance_1.json`, etc.)
-4. Les logs sont dans `logs/instance_1.log`, `logs/instance_2.log`, etc.
-5. À la fin, fusionne tous les résultats
-
-**Performance attendue:**
-- **MacBook Pro M2 32GB:** 4-6 instances recommandées
-- **Vitesse:** **400-600 images/minute** (4x plus rapide!)
-- **45 000 maisons en 2-3 heures** au lieu de 8-12 heures!
-
-**Surveillance en temps réel:**
-```bash
-# Voir les logs d'une instance
-tail -f logs/instance_1.log
-
-# Voir toutes les instances
-tail -f logs/instance_*.log
-```
-
-**Après le scan:**
-```bash
-# Fusionner tous les checkpoints en un seul
-python merge_checkpoints.py
-```
-
-### Version complète 🚀
-
-Cette version parcourt **TOUT** le site Centris avec pagination complète et système de reprise (plus stable mais plus lent):
-
-```bash
-# Mode normal (recommandé) - affiche la progression en temps réel
-python duck_finder_complete.py
-
-# Mode VISUEL - voir le navigateur en action! 👁️
-python duck_finder_complete.py --show-browser
-
-# Mode silencieux - seulement les résultats importants
-python duck_finder_complete.py --quiet
-```
-
-**Fonctionnalités:**
-- ✅ Pagination automatique pour parcourir toutes les pages de résultats
-- ✅ Système de checkpoint pour reprendre en cas d'interruption
-- ✅ Détection améliorée avec analyse de contours
-- ✅ Statistiques en temps réel avec progression détaillée
-- ✅ Sauvegarde automatique de la progression tous les 10 propriétés
-- ✅ Mode visuel optionnel pour voir le navigateur en action
-
-**Ce que tu verras pendant l'exécution:**
-- 📍 URL de chaque propriété en cours d'analyse
-- 🖼️ Nombre d'images trouvées par propriété
-- ⏱️ Temps écoulé et statistiques en temps réel
-- 🦆 Alertes immédiates quand un canard potentiel est détecté
-- 💾 Confirmations de sauvegarde de checkpoint
-- 📊 Statistiques tous les 10 propriétés
-
-Si le script est interrompu (Ctrl+C), tu peux simplement le relancer et il reprendra là où il s'est arrêté grâce au fichier `checkpoint.json`.
-
-### Versions basiques
-
-```bash
-# Version avec Playwright (pour sites JavaScript) - limité à 50 propriétés
-python duck_finder_playwright.py
-
-# Version avec requests (peut ne pas fonctionner sur Centris)
-python duck_finder.py
-```
-
-### Script d'exploration
-
-Pour explorer la structure du site Centris:
-
-```bash
-python explore_centris.py
-```
-
-### Script de test de détection 🧪
-
-Pour tester la détection sur une image spécifique avant de lancer le scan complet:
-
-```bash
-python test_detection.py <chemin_image>
-
-# Exemples:
-python test_detection.py test_image.jpg
-python test_detection.py potential_ducks/duck_12345.jpg
-```
-
-Ce script va:
-- Analyser l'image avec les mêmes critères que le scan complet
-- Afficher les statistiques détaillées (pourcentage de pixels mauves, contours, etc.)
-- Créer des visualisations dans `test_results/`:
-  - `*_mask.jpg` - Masque de détection
-  - `*_contours.jpg` - Image avec contours
-  - `*_overlay.jpg` - Overlay des zones mauves
-
-### Nettoyage 🧹
-
-Pour supprimer tous les résultats et recommencer à zéro:
-
-```bash
-bash clean.sh
-```
-
-Cela supprime:
-- `potential_ducks/` - Images suspectes trouvées
-- `images/` - Images temporaires
-- `screenshots/` - Captures d'écran
-- `test_results/` - Résultats de tests
-- `checkpoint.json` - Fichier de progression
+1. **Scan du site:** Le script parcourt toutes les pages de propriétés sur Centris
+2. **Téléchargement:** Toutes les images sont téléchargées en parallèle
+3. **Détection:** Analyse HSV + détection de contours pour trouver le mauve (#c97ef2)
+4. **Sauvegarde:** Les images suspectes sont dans `potential_ducks/`
 
 ## Résultats
 
-Les images suspectes sont sauvegardées dans le dossier `potential_ducks/` avec:
-- L'image originale (`duck_*.jpg`)
-- Le masque de détection (`mask_*.jpg`)
-- L'image avec contours détectés (`contours_*.jpg`)
-- Les informations détaillées (`info_*.txt`)
+Les canards potentiels sont sauvegardés dans:
+```
+potential_ducks/
+  ├── duck_1_hash.jpg      # Image avec canard potentiel
+  ├── duck_2_hash.jpg
+  └── ...
+```
 
-## Stratégie de détection
+## Checkpoints
 
-Le script utilise une détection multi-niveaux ciblée sur la couleur **exacte** du canard:
+Le scan sauvegarde automatiquement la progression dans `checkpoint.json`.
+Si tu interromps (Ctrl+C), tu peux reprendre là où tu étais!
 
-### Couleur du canard 🎨
-- **HEX:** `#c97ef2`
-- **RGB:** (201, 126, 242)
-- **HSV:** (139, 122, 242) dans l'espace OpenCV
+## Structure du Projet
 
-### Méthode de détection
+```
+centris_duck/
+├── run.sh                    # 👈 LANCE-MOI!
+├── duck_finder.py            # Scanner principal
+├── parallel_scan.py          # Orchestrateur multi-instances
+├── merge_checkpoints.py      # Fusion des checkpoints
+├── analyze_reference.py      # Analyse d'image de référence
+├── test_detection.py         # Test de détection
+├── reference_detector.py     # Module de détection
+├── config.py                 # Configuration
+└── reference/                # Place ton image de canard ici
+```
 
-1. **Détection de couleur HSV stricte**
-   - **Plage principale (lumière):** H: 131-147, S: 82-162, V: 192-255
-   - **Plage secondaire (ombre):** H: 129-149, S: 60-180, V: 150-200
-   - Ces plages sont **beaucoup plus strictes** pour éviter les faux positifs
+## Dépendances
 
-2. **Opérations morphologiques**
-   - Nettoyage du bruit avec fermeture/ouverture (kernel 3x3)
-   - Amélioration des contours
-
-3. **Détection de contours**
-   - Identification de formes cohérentes (un canard!)
-   - Filtrage par taille minimale: **> 500 pixels²** (augmenté pour éviter les artefacts)
-
-4. **Critères de suspicion STRICTS**
-   - Au moins **1.0%** de pixels mauves dans l'image (augmenté de 0.3%)
-   - **ET** au moins un contour significatif de > 500 pixels²
-   - **OU** un très gros contour de > 2000 pixels² (probablement le canard!)
-
-Ces critères stricts réduisent drastiquement les faux positifs tout en gardant une bonne sensibilité pour le vrai canard.
-
-## Progression et reprise
-
-Le fichier `checkpoint.json` contient:
-- Liste des propriétés déjà visitées
-- Liste des images déjà analysées
-- Statistiques de progression
-- Date de dernière mise à jour
-
-Pour recommencer depuis zéro, supprime simplement `checkpoint.json`.
+Le script installe automatiquement:
+- `playwright` - Automatisation du navigateur
+- `opencv-python` - Détection d'image
+- `numpy` - Calculs mathématiques
+- `aiohttp` - Téléchargements parallèles
+- `beautifulsoup4` - Parsing HTML
+- `Pillow` - Manipulation d'images
 
 ## Performance
 
-Le script peut prendre plusieurs heures pour analyser tout le site Centris (plusieurs milliers de propriétés). La progression est automatiquement sauvegardée tous les 10 propriétés.
+| Mode | Images/min | Temps pour 45,000 maisons |
+|------|-----------|---------------------------|
+| Rapide | 100-200 | 8-12 heures |
+| Parallèle (4 instances) | 400-600 | 2-3 heures |
+
+## Configuration Recommandée
+
+**MacBook Pro M2 32GB:**
+- Mode parallèle: 4-6 instances
+- Workers par instance: 8-12
+- Total workers: 32-72
+
+## Détection du Canard
+
+Le script cherche:
+- Couleur: Mauve #c97ef2 (ou ta couleur de référence)
+- Critères stricts:
+  - **1%+ de pixels mauves** ET **contours détectés**
+  - OU **gros contour mauve** (2000+ pixels²)
+
+Cela réduit drastiquement les faux positifs!
+
+## Tips
+
+- **Première fois?** Teste sur 5 pages: Choisis option 1, puis entre "5"
+- **Trop de candidats?** Utilise une image de référence (option 3)
+- **Aller plus vite?** Mode parallèle (option 2) avec 4-6 instances
+- **Checkpoint corrompu?** Nettoie tout (option 6)
+
+Bonne chasse au canard! 🦆
