@@ -80,6 +80,48 @@ python duck_finder_fast.py --quiet
 
 **Note:** Compatible avec le même système de checkpoint que la version normale. Tu peux alterner entre les deux versions.
 
+### Mode MULTI-INSTANCES 🚀🚀🚀 (ULTRA RAPIDE pour gros sites)
+
+Pour les **très gros sites** (250+ pages, 45000+ maisons), lance **plusieurs instances en parallèle**:
+
+```bash
+# Lance 4 instances en parallèle (recommandé pour MacBook Pro M2 32GB)
+python parallel_scan.py --total-pages 250 --instances 4 --workers 8
+
+# Configuration agressive (6 instances x 12 workers = 72 workers!)
+python parallel_scan.py --total-pages 250 --instances 6 --workers 12
+
+# Pour tester
+python parallel_scan.py --total-pages 20 --instances 2 --workers 4
+```
+
+**Comment ça marche:**
+1. Le script divise les 250 pages en 4 tranches (ex: 1-62, 63-125, 126-187, 188-250)
+2. Lance 4 processus Python séparés, un par tranche
+3. Chaque processus a son propre checkpoint (`checkpoint_instance_1.json`, etc.)
+4. Les logs sont dans `logs/instance_1.log`, `logs/instance_2.log`, etc.
+5. À la fin, fusionne tous les résultats
+
+**Performance attendue:**
+- **MacBook Pro M2 32GB:** 4-6 instances recommandées
+- **Vitesse:** **400-600 images/minute** (4x plus rapide!)
+- **45 000 maisons en 2-3 heures** au lieu de 8-12 heures!
+
+**Surveillance en temps réel:**
+```bash
+# Voir les logs d'une instance
+tail -f logs/instance_1.log
+
+# Voir toutes les instances
+tail -f logs/instance_*.log
+```
+
+**Après le scan:**
+```bash
+# Fusionner tous les checkpoints en un seul
+python merge_checkpoints.py
+```
+
 ### Version complète 🚀
 
 Cette version parcourt **TOUT** le site Centris avec pagination complète et système de reprise (plus stable mais plus lent):

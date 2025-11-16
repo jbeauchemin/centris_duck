@@ -26,21 +26,30 @@ from reference_detector import get_detection_ranges, get_reference_stats
 class FastDuckFinder:
     """Finder optimisé pour la vitesse avec parallélisation"""
 
-    def __init__(self, verbose=True, show_browser=False, max_workers=4):
+    def __init__(self, verbose=True, show_browser=False, max_workers=4,
+                 checkpoint_file='checkpoint.json', instance_id=None,
+                 start_page=None, end_page=None):
         self.verbose = verbose
         self.show_browser = show_browser
         self.max_workers = max_workers  # Nombre de téléchargements parallèles
+        self.instance_id = instance_id
+        self.start_page = start_page
+        self.end_page = end_page
 
         self.results_dir = Path('potential_ducks')
         self.results_dir.mkdir(exist_ok=True)
 
-        self.images_dir = Path('images')
+        # Si multi-instances, créer des dossiers séparés
+        if instance_id:
+            self.images_dir = Path(f'images_instance_{instance_id}')
+        else:
+            self.images_dir = Path('images')
         self.images_dir.mkdir(exist_ok=True)
 
         self.screenshots_dir = Path('screenshots')
         self.screenshots_dir.mkdir(exist_ok=True)
 
-        self.checkpoint_file = Path('checkpoint.json')
+        self.checkpoint_file = Path(checkpoint_file)
         self.checkpoint = self.load_checkpoint()
 
         self.visited_properties: Set[str] = set(self.checkpoint.get('visited_properties', []))
@@ -113,7 +122,11 @@ class FastDuckFinder:
 
     async def search_all_listings(self, page: Page, max_pages=None) -> List[str]:
         """Recherche TOUTES les propriétés en parcourant la pagination"""
-        print("🔍 Recherche de TOUTES les propriétés sur Centris...")
+        if self.instance_id:
+            print(f"🔍 [Instance {self.instance_id}] Recherche propriétés (pages {self.start_page}-{self.end_page})...")
+        else:
+            print("🔍 Recherche de TOUTES les propriétés sur Centris...")
+
         all_property_urls = []
         base_search_url = 'https://www.centris.ca/fr/propriete~a-vendre'
 
@@ -125,10 +138,28 @@ class FastDuckFinder:
             if total_count > 0:
                 print(f"📊 Total de propriétés trouvées: {total_count}")
 
-            page_num = 1
-            max_page_limit = max_pages or 1000
+            # Déterminer les limites de pages
+            if self.start_page and self.end_page:
+                start = self.start_page
+                end = self.end_page
+                print(f"📄 Traitement pages {start} à {end}")
+            else:
+                start = 1
+                end = max_pages or 1000
 
-            while page_num <= max_page_limit:
+            page_num = start
+
+            # Naviguer jusqu'à la page de départ si nécessaire
+            if start > 1:
+                print(f"⏩ Navigation jusqu'à la page {start}...")
+                for _ in range(start - 1):
+                    next_found = await self.click_next_page(page)
+                    if not next_found:
+                        print(f"❌ Ne peut pas atteindre la page {start}")
+                        return []
+                    await page.wait_for_timeout(800)
+
+            while page_num <= end:
                 print(f"📄 Page {page_num}...", end=' ', flush=True)
 
                 await page.wait_for_timeout(1000)  # Réduit de 2000 à 1000
@@ -517,6 +548,10 @@ async def main():
     parser.add_argument('--quiet', action='store_true', help='Mode silencieux')
     parser.add_argument('--workers', type=int, default=8, help='Nombre de workers parallèles (défaut: 8)')
     parser.add_argument('--max-pages', type=int, help='Limite le nombre de pages à scanner')
+    parser.add_argument('--start-page', type=int, help='Page de départ (pour multi-instances)')
+    parser.add_argument('--end-page', type=int, help='Page de fin (pour multi-instances)')
+    parser.add_argument('--checkpoint', type=str, default='checkpoint.json', help='Fichier de checkpoint')
+    parser.add_argument('--instance-id', type=int, help='ID de l\'instance (pour multi-instances)')
 
     args = parser.parse_args()
 
@@ -524,12 +559,28 @@ async def main():
     show_browser = args.show_browser
     max_workers = args.workers
     max_pages = args.max_pages
+    start_page = args.start_page
+    end_page = args.end_page
+    checkpoint_file = args.checkpoint
+    instance_id = args.instance_id
 
-    print(f"\n⚡ MODE RAPIDE - {max_workers} workers en parallèle")
-    if max_pages:
-        print(f"📄 Limité à {max_pages} pages")
+    if instance_id:
+        print(f"\n⚡ INSTANCE {instance_id} - {max_workers} workers")
+        print(f"📄 Pages {start_page} à {end_page}")
+    else:
+        print(f"\n⚡ MODE RAPIDE - {max_workers} workers en parallèle")
+        if max_pages:
+            print(f"📄 Limité à {max_pages} pages")
 
-    finder = FastDuckFinder(verbose=verbose, show_browser=show_browser, max_workers=max_workers)
+    finder = FastDuckFinder(
+        verbose=verbose,
+        show_browser=show_browser,
+        max_workers=max_workers,
+        checkpoint_file=checkpoint_file,
+        instance_id=instance_id,
+        start_page=start_page,
+        end_page=end_page
+    )
     await finder.run(max_pages=max_pages)
 
 

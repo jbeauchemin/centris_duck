@@ -12,6 +12,7 @@ ENV/
 # Images et résultats
 potential_ducks/
 images/
+images_instance_*/
 screenshots/
 *.jpg
 *.png
@@ -19,6 +20,8 @@ screenshots/
 
 # Checkpoint de progression
 checkpoint.json
+checkpoint_instance_*.json
+checkpoint_merged.json
 
 # IDE
 .vscode/
@@ -28,3 +31,4 @@ checkpoint.json
 
 # Logs
 *.log
+logs/
