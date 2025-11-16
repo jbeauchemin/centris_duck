@@ -20,6 +20,35 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
+## 🎯 Image de référence (RECOMMANDÉ!)
+
+Pour améliorer la précision, tu peux fournir une **image du canard mauve** que tu cherches:
+
+```bash
+# 1. Place ton image du canard dans le dossier reference/
+cp mon_canard.jpg reference/duck_reference.jpg
+
+# 2. Analyse l'image pour extraire les couleurs
+python analyze_reference.py
+
+# 3. Lance le scan normalement - il utilisera automatiquement ton image!
+python duck_finder_fast.py
+```
+
+**Avantages:**
+- ✅ Détection basée sur **TA** couleur exacte de canard
+- ✅ Réduit encore plus les faux positifs
+- ✅ S'adapte aux variations d'éclairage de ton image
+- ✅ Génère un profil de couleur optimisé automatiquement
+
+Le script `analyze_reference.py` va:
+- Analyser les couleurs de ton canard
+- Extraire les plages HSV optimales
+- Créer un profil `reference/duck_profile.json`
+- Montrer des visualisations (masques, overlay)
+
+Si aucune image de référence n'est fournie, le script utilise la couleur par défaut **#c97ef2**.
+
 ## Utilisation
 
 ### Version RAPIDE ⚡ (RECOMMANDÉE)

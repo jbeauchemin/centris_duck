@@ -1,0 +1,12 @@
+# Ignorer les images de référence (chaque utilisateur a la sienne)
+duck_reference.*
+*.jpg
+*.png
+*.jpeg
+*.webp
+
+# Ignorer le profil généré
+duck_profile.json
+
+# Mais garder le README
+!README.md

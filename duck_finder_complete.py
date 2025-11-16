@@ -19,6 +19,7 @@ from io import BytesIO
 from tqdm import tqdm
 from playwright.async_api import async_playwright, Page, Browser
 import hashlib
+from reference_detector import get_detection_ranges, get_reference_stats
 
 
 class CompleteDuckFinder:
@@ -335,25 +336,20 @@ class CompleteDuckFinder:
             # Convertir en HSV
             hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-            # Couleur EXACTE du canard: #c97ef2
-            # HSV OpenCV: (139, 122, 242)
-            # Plage stricte pour cibler spécifiquement cette couleur
+            # Obtenir les plages de détection (profil de référence ou valeurs par défaut)
+            ranges = get_detection_ranges(use_tolerant=False)
 
-            # Plage principale (stricte) - pour le violet du canard
-            # H: 139 ± 8 (131-147) pour capturer les variations d'éclairage
-            # S: 122 ± 40 (82-162) pour capturer différentes saturations
-            # V: 242 ± 50 (192-255) pour capturer différentes luminosités
-            lower_purple_exact = np.array([131, 82, 192])
-            upper_purple_exact = np.array([147, 162, 255])
+            # Créer le masque avec les plages
+            lower_exact, upper_exact = ranges['exact']
+            mask1 = cv2.inRange(hsv, lower_exact, upper_exact)
 
-            # Plage secondaire (un peu plus large) pour les zones d'ombre du canard
-            lower_purple_shadow = np.array([129, 60, 150])
-            upper_purple_shadow = np.array([149, 180, 200])
-
-            # Créer masques
-            mask1 = cv2.inRange(hsv, lower_purple_exact, upper_purple_exact)
-            mask2 = cv2.inRange(hsv, lower_purple_shadow, upper_purple_shadow)
-            mask = cv2.bitwise_or(mask1, mask2)
+            # Si on a une plage shadow (mode par défaut), l'ajouter
+            if ranges['shadow'] is not None:
+                lower_shadow, upper_shadow = ranges['shadow']
+                mask2 = cv2.inRange(hsv, lower_shadow, upper_shadow)
+                mask = cv2.bitwise_or(mask1, mask2)
+            else:
+                mask = mask1
 
             # Opérations morphologiques pour nettoyer
             kernel = np.ones((3, 3), np.uint8)
@@ -472,6 +468,16 @@ class CompleteDuckFinder:
         self.log("🦆 CENTRIS DUCK FINDER - VERSION COMPLÈTE 🦆", force=True)
         self.log("=" * 60, force=True)
         self.log("Ce script va parcourir TOUTES les propriétés de Centris!", force=True)
+
+        # Afficher les infos de référence
+        ref_stats = get_reference_stats()
+        if ref_stats['has_reference']:
+            self.log(f"🎯 Image de référence: {ref_stats['image_path']}", force=True)
+            pure_color = ref_stats['pure_color']
+            self.log(f"   Couleur: H={pure_color['hue']:.0f}, S={pure_color['saturation']:.0f}, V={pure_color['value']:.0f}", force=True)
+        else:
+            self.log(f"🎯 Couleur par défaut: {ref_stats['default_color']}", force=True)
+
         self.log("=" * 60, force=True)
 
         if self.show_browser:
