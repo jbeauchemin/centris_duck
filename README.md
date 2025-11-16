@@ -73,6 +73,41 @@ Pour explorer la structure du site Centris:
 python explore_centris.py
 ```
 
+### Script de test de détection 🧪
+
+Pour tester la détection sur une image spécifique avant de lancer le scan complet:
+
+```bash
+python test_detection.py <chemin_image>
+
+# Exemples:
+python test_detection.py test_image.jpg
+python test_detection.py potential_ducks/duck_12345.jpg
+```
+
+Ce script va:
+- Analyser l'image avec les mêmes critères que le scan complet
+- Afficher les statistiques détaillées (pourcentage de pixels mauves, contours, etc.)
+- Créer des visualisations dans `test_results/`:
+  - `*_mask.jpg` - Masque de détection
+  - `*_contours.jpg` - Image avec contours
+  - `*_overlay.jpg` - Overlay des zones mauves
+
+### Nettoyage 🧹
+
+Pour supprimer tous les résultats et recommencer à zéro:
+
+```bash
+bash clean.sh
+```
+
+Cela supprime:
+- `potential_ducks/` - Images suspectes trouvées
+- `images/` - Images temporaires
+- `screenshots/` - Captures d'écran
+- `test_results/` - Résultats de tests
+- `checkpoint.json` - Fichier de progression
+
 ## Résultats
 
 Les images suspectes sont sauvegardées dans le dossier `potential_ducks/` avec:
